@@ -5,14 +5,17 @@ date and evidence pointer.
 
 ## Now
 
-- [ ] Owner runs the history purge (scratchpad `purge-history.sh`: drops the
-      copied application spec from every commit, force-pushes main and the
-      alpha.1 tag). Then flip the repository public, verify anonymous download
-      of a release asset and the raw installer URLs, tag `v0.3.0-alpha.2`
-      (first release with `agentdrop update`), and prove `update` from alpha.2
-      onward on Linux and in the Windows VM.
-- [ ] Deploy the rewritten site CLI guide once the repository is public (the
-      guide links to the public repo, releases, and raw installer scripts).
+- [x] 2026-09-11 — History purged of the copied application spec (owner ran
+      the rewrite), repository made **public** (issues on, wiki off), anonymous
+      downloads verified, `v0.3.0-alpha.2` released as latest (first build with
+      `agentdrop update`). Residual: old commits remain fetchable by SHA on
+      GitHub until it garbage-collects; owner accepted (design doc only, no
+      secrets).
+- [ ] Hand alpha testers the one-liners from https://agentdrop.lol/docs/cli and
+      collect first feedback as test cases. Next fixes ship as `v0.3.0-alpha.N`;
+      testers run `agentdrop update`.
+- [x] 2026-09-11 — Site CLI guide rewritten for native installs, update and
+      Windows guidance; live on agentdrop.lol/docs/cli (application main build).
 - [ ] Windows 11 VM dogfood, remaining items (22/22 CLI checks passed
       2026-09-11, see results in `docs/windows-testing.md`): PowerShell 7 in the
       VM, Ctrl-C during login, WSL with the Linux binary, and the tester's agent
