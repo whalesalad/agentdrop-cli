@@ -217,9 +217,18 @@ Platform behaviors to document for Windows users (not CLI bugs):
   policy change. Once releases are public, an `irm URL | iex` one-liner avoids
   the file entirely.
 
+- **Mark-of-the-Web / SmartScreen.** Tagged the zip with `ZoneId=3` and
+  extracted it with the Explorer COM API so the mark propagated to
+  `agentdrop.exe` (Zone.Identifier stream present). Running it from a terminal:
+  no prompt, exit 0. Shell-executing it (double-click equivalent): the
+  "Open File - Security Warning / Unknown Publisher" dialog; after Run, no
+  further SmartScreen dialog appeared on this Enterprise Evaluation build.
+  Consumer SKUs may still show "Windows protected your PC" for an unsigned,
+  unknown-reputation exe. Since the CLI is only useful from a terminal, this
+  only affects people who double-click the exe.
+
 Not yet run: agent extension inside VS Code (needs the tester's accounts),
-PowerShell 7 in the VM, WSL, Ctrl-C during login, SmartScreen on a downloaded
-zip (the VM fetched it from the LAN, so no Mark-of-the-Web).
+PowerShell 7 in the VM, WSL, Ctrl-C during login.
 
 ## Manual checklist (record results in the journal)
 

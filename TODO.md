@@ -9,9 +9,8 @@ date and evidence pointer.
       `linux-amd64` / `windows-amd64` archives to alpha testers. Collect first
       dogfood feedback as test cases.
 - [ ] Windows 11 VM dogfood, remaining items (22/22 CLI checks passed
-      2026-09-11, see results in `docs/windows-testing.md`): SmartScreen on a
-      zip downloaded through Edge (Mark-of-the-Web), PowerShell 7 in the VM,
-      Ctrl-C during login, WSL with the Linux binary, and the tester's agent
+      2026-09-11, see results in `docs/windows-testing.md`): PowerShell 7 in the
+      VM, Ctrl-C during login, WSL with the Linux binary, and the tester's agent
       extension in VS Code (needs their accounts).
 - [x] 2026-09-11 — README Windows notes: execution-policy-safe install command,
       file arguments over PS 5.1 pipes, OEM-code-page caveat for `--json`.
