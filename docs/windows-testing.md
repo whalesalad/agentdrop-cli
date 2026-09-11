@@ -87,12 +87,36 @@ Gotchas hit on first boot:
 
 Setup notes: Enterprise Evaluation asks for no product key. Create a local
 account (choose the domain-join/offline option if OOBE pushes a Microsoft
-account). After first login: install VS Code (user installer), then snapshot:
+account). After first login: install VS Code (user installer), disable
+automatic updates, then take the base image. libvirt 9.0 (Debian 12) refuses
+internal snapshots for UEFI/pflash VMs ("internal snapshots of a VM with
+pflash based firmware are not supported"), so the base is a **golden qcow2
+plus a thin overlay** instead of a libvirt snapshot. With the VM shut off:
 
 ```sh
-virsh -c qemu:///system snapshot-create-as win11-agentdrop clean-vscode
-virsh -c qemu:///system snapshot-revert win11-agentdrop clean-vscode
+v() { virsh -c qemu:///system "$@"; }
+v vol-clone --pool default win11-agentdrop.qcow2 win11-agentdrop-base-clean-vscode.qcow2
+v vol-delete --pool default win11-agentdrop.qcow2
+v vol-create-as default win11-agentdrop.qcow2 64G --format qcow2 \
+  --backing-vol win11-agentdrop-base-clean-vscode.qcow2 --backing-vol-format qcow2
 ```
+
+Revert to the clean base (instant; the golden file is never written):
+
+```sh
+v shutdown win11-agentdrop   # or destroy, if hung
+until [ "$(v domstate win11-agentdrop)" = "shut off" ]; do sleep 3; done
+v vol-delete --pool default win11-agentdrop.qcow2
+v vol-create-as default win11-agentdrop.qcow2 64G --format qcow2 \
+  --backing-vol win11-agentdrop-base-clean-vscode.qcow2 --backing-vol-format qcow2
+v start win11-agentdrop
+```
+
+To promote a new base (for example after installing an agent extension), shut
+off, `vol-clone` the overlay to a new base name, and recreate the overlay on it.
+Base `clean-vscode` (2026-09-11): Enterprise Eval 24H2 fully patched, local
+user `tester` with no password, `NoAutoUpdate=1` policy, VS Code 1.137.0,
+virtio-win guest tools (SPICE agent, display auto-resize).
 
 Move builds into the VM by downloading the release asset from GitHub inside the
 guest. Do not copy credentials in.
@@ -118,8 +142,11 @@ guest. Do not copy credentials in.
 - **OOBE path that reached a local account on Enterprise:** Sign-in options →
   Domain join instead → name → empty password (skips security questions) →
   privacy Next/Accept. The consumer editions need `start ms-cxh:localonly`.
-- **Pause or disable Windows Update before the base snapshot**, otherwise every
-  snapshot revert is followed by update churn and a reboot prompt mid-test.
+- **Disable Windows Update before the base image**, otherwise every revert is
+  followed by update churn and a reboot prompt mid-test. Done via the
+  `NoAutoUpdate` policy in the elevated bootstrap script.
+- **libvirt internal snapshots do not work with UEFI VMs on Debian 12**; use the
+  golden-base-plus-overlay procedure above.
 - **Driving the VM headlessly works well**: `virsh send-key` for keyboard and
   QMP `input-send-event` absolute tablet events for the mouse, with
   `virsh screenshot` as eyes. Helper lives in the session scratchpad; promote
