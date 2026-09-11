@@ -3,6 +3,7 @@ package auth
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -26,13 +27,21 @@ func TestResolveDir(t *testing.T) {
 	if _, err := ResolveDir(getenv); err == nil {
 		t.Fatal("relative dir accepted")
 	}
-	env["AGENTDROP_CREDENTIAL_DIR"] = "/explicit"
-	if d, _ := ResolveDir(getenv); d != "/explicit" {
+	explicit := "/explicit"
+	if runtime.GOOS == "windows" {
+		explicit = `C:\explicit`
+	}
+	env["AGENTDROP_CREDENTIAL_DIR"] = explicit
+	if d, _ := ResolveDir(getenv); d != explicit {
 		t.Fatalf("explicit: %q", d)
 	}
 	delete(env, "AGENTDROP_CREDENTIAL_DIR")
-	env["XDG_CONFIG_HOME"] = "/xdg"
-	if d, _ := ResolveDir(getenv); d != filepath.Join("/xdg", "agentdrop") {
+	xdg := "/xdg"
+	if runtime.GOOS == "windows" {
+		xdg = `C:\xdg`
+	}
+	env["XDG_CONFIG_HOME"] = xdg
+	if d, _ := ResolveDir(getenv); d != filepath.Join(xdg, "agentdrop") {
 		t.Fatalf("xdg: %q", d)
 	}
 }
@@ -43,8 +52,7 @@ func TestSaveLoadRemove(t *testing.T) {
 	if err := s.Prepare(); err != nil {
 		t.Fatal(err)
 	}
-	info, _ := os.Stat(dir)
-	if info.Mode().Perm() != 0o700 {
+	if info, _ := os.Stat(dir); runtime.GOOS != "windows" && info.Mode().Perm() != 0o700 {
 		t.Fatalf("dir mode %o", info.Mode().Perm())
 	}
 	cred := Credential{Origin: "https://agentdrop.lol", APIToken: "adapi-abc-def", APITokenID: "t1", VaultID: "v1"}
