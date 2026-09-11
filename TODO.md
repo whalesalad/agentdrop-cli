@@ -39,6 +39,10 @@ date and evidence pointer.
 
 ## Later
 
+- [ ] Second Windows VM from a current consumer ISO fetched in the owner's
+      browser, and optionally an LTSC 2024 eval VM; see the lessons section in
+      `docs/windows-testing.md`. Once a year cadence; not urgent.
+
 - [ ] Homebrew tap, Scoop bucket, winget, `.deb`/`.rpm`.
 - [ ] Expansion targets (linux/arm, 386, riscv64, FreeBSD/OpenBSD) as
       experimental build-only artifacts.

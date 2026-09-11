@@ -97,6 +97,34 @@ virsh -c qemu:///system snapshot-revert win11-agentdrop clean-vscode
 Move builds into the VM by downloading the release asset from GitHub inside the
 guest. Do not copy credentials in.
 
+## Lessons from the first VM build (2026-09-11), for the next one
+
+- **Use a current ISO.** The Evaluation Center image is cut once per feature
+  release (the 24H2 eval is build 26100.1742 from September 2024) and every
+  fresh install then spends 20+ minutes downloading and, mostly, CPU-expanding a
+  year of cumulative updates inside the VM. Microsoft's consumer download page
+  re-cuts its ISO every few months with the current patch level, but it rejects
+  scripted requests. Next time the owner fetches the ISO in their own browser
+  (once a year, not worth automating) and we build from that. Owner decision.
+- **Try LTSC for a second, minimal box** (Enterprise LTSC 2024 eval exists on
+  the Evaluation Center, 5.1 GB, same 2024 base). No Store, Copilot, Widgets or
+  winget. Keep the stock consumer-style VM as the "what the tester has" machine;
+  do not debloat it, since SmartScreen/Defender/stock PowerShell behavior is the
+  point of the test.
+- **OOBE update stage looks like a slow download but is CPU-bound.** Guest NIC
+  receive was zero while "Downloading 50%" showed and qemu ran ~5 cores; the
+  network path (vnet on virbr0, e1000e) was fine. Give a fresh-install VM more
+  vCPUs for the first boot, or install from a current ISO.
+- **OOBE path that reached a local account on Enterprise:** Sign-in options →
+  Domain join instead → name → empty password (skips security questions) →
+  privacy Next/Accept. The consumer editions need `start ms-cxh:localonly`.
+- **Pause or disable Windows Update before the base snapshot**, otherwise every
+  snapshot revert is followed by update churn and a reboot prompt mid-test.
+- **Driving the VM headlessly works well**: `virsh send-key` for keyboard and
+  QMP `input-send-event` absolute tablet events for the mouse, with
+  `virsh screenshot` as eyes. Helper lives in the session scratchpad; promote
+  it to `scripts/vm/` if it keeps earning its keep.
+
 ## Manual checklist (record results in the journal)
 
 Install and launch:
