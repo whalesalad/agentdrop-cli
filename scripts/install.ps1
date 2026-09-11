@@ -7,8 +7,12 @@
   adds that directory to the user PATH. No elevation required. Credentials are
   never touched. Works in Windows PowerShell 5.1 and PowerShell 7.
 .NOTES
-  Windows client editions default to the Restricted execution policy, so run
-  this as:  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version vX.Y.Z
+  Windows client editions default to the Restricted execution policy. Either
+  pipe it:  irm https://raw.githubusercontent.com/whalesalad/agentdrop-cli/main/scripts/install.ps1 | iex
+  or run a downloaded copy with:  powershell -ExecutionPolicy Bypass -File .\install.ps1
+  Omit -Version to install the latest release.
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\install.ps1
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.3.0-alpha.1
 .EXAMPLE
@@ -69,21 +73,26 @@ if ($Uninstall) {
     exit 0
 }
 
-if (-not $Version) {
-    throw "Pass -Version (for example -Version v0.3.0-alpha.1). Automatic 'latest' resolution arrives with public releases."
-}
-$ver = $Version.TrimStart('v')
-$arch = Get-Arch
-$asset = "agentdrop-$ver-windows-$arch.zip"
-$base = $BaseUrl.TrimEnd('/')
-if ($base -match 'github\.com') { $base = "$base/v$ver" }
-
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
 $ProgressPreference = 'SilentlyContinue'
+$base = $BaseUrl.TrimEnd('/')
+$isGitHub = $base -match 'github\.com'
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("agentdrop-install-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
+    if (-not $Version) {
+        # Latest release: manifest.json has a stable name, so no API call or token is needed.
+        $manifestUrl = if ($isGitHub) { "https://github.com/whalesalad/agentdrop-cli/releases/latest/download/manifest.json" } else { "$base/manifest.json" }
+        Invoke-WebRequest -Uri $manifestUrl -OutFile (Join-Path $tmp 'manifest.json') -UseBasicParsing
+        $Version = (Get-Content (Join-Path $tmp 'manifest.json') -Raw | ConvertFrom-Json).version
+        if (-not $Version) { throw "manifest.json did not contain a version" }
+    }
+    $ver = $Version.TrimStart('v')
+    $arch = Get-Arch
+    $asset = "agentdrop-$ver-windows-$arch.zip"
+    if ($isGitHub) { $base = "$base/v$ver" }
+
     Write-Host "Downloading $asset from $base"
     Invoke-WebRequest -Uri "$base/checksums.txt" -OutFile (Join-Path $tmp 'checksums.txt') -UseBasicParsing
     Invoke-WebRequest -Uri "$base/$asset" -OutFile (Join-Path $tmp $asset) -UseBasicParsing

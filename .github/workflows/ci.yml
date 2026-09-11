@@ -16,6 +16,37 @@ jobs:
       - run: make check
       - name: cross-build the primary matrix
         run: ./scripts/build.sh ci
+      - name: install.sh against the local dist (latest, pinned, checksum failure, uninstall)
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist & sleep 1
+          sh scripts/install.sh --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
+          test "$(./ibin/agentdrop --version)" = ci
+          sh scripts/install.sh --version ci --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
+          mkdir bad && cp dist/agentdrop-ci-linux-amd64.tar.gz bad/ && sed 's/^[0-9a-f]\{64\}/0000000000000000000000000000000000000000000000000000000000000000/' dist/checksums.txt > bad/checksums.txt
+          python3 -m http.server 8001 --bind 127.0.0.1 --directory bad & sleep 1
+          if sh scripts/install.sh --version ci --base-url http://127.0.0.1:8001 --dir "$PWD/ibin2"; then echo "checksum mismatch was accepted"; exit 1; fi
+          test ! -e ibin2/agentdrop
+          sh scripts/install.sh --uninstall --dir "$PWD/ibin"
+          test ! -e ibin/agentdrop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+  macos-install:
+    needs: check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: install.sh on macOS (arm64 runner)
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist & sleep 1
+          sh scripts/install.sh --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
+          test "$(./ibin/agentdrop --version)" = ci
+          ./ibin/agentdrop --version --json | grep -q '"os":"darwin"'
   windows:
     runs-on: windows-latest
     steps:
@@ -40,3 +71,22 @@ jobs:
         run: |
           .\agentdrop.exe --version
           if errorlevel 1 exit /b 1
+      - name: install.ps1 against a local dist (latest, pinned, uninstall)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          New-Item -ItemType Directory stage | Out-Null
+          Copy-Item agentdrop.exe stage\
+          Compress-Archive -Path stage\* -DestinationPath dist\agentdrop-ci-windows-amd64.zip
+          $h = (Get-FileHash dist\agentdrop-ci-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+          "$h  agentdrop-ci-windows-amd64.zip" | Set-Content dist\checksums.txt
+          '{"version":"ci"}' | Set-Content dist\manifest.json
+          $srv = Start-Process python -ArgumentList '-m','http.server','8000','--bind','127.0.0.1','--directory','dist' -PassThru
+          Start-Sleep 2
+          $dir = Join-Path $PWD 'ibin'
+          powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -BaseUrl http://127.0.0.1:8000 -InstallDir $dir -NoPath
+          if ((& "$dir\agentdrop.exe" --version) -ne 'ci') { throw "latest install did not report ci" }
+          powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Version ci -BaseUrl http://127.0.0.1:8000 -InstallDir $dir -NoPath
+          powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Uninstall -InstallDir $dir
+          if (Test-Path "$dir\agentdrop.exe") { throw "uninstall left the exe" }
+          Stop-Process $srv

@@ -11,35 +11,42 @@ yet been exercised on real hardware.
 
 ## Install (alpha)
 
-**Windows (PowerShell):** download `install.ps1` from the release, then run it
-through `powershell -ExecutionPolicy Bypass`. Windows client editions ship with
-the Restricted execution policy, so a plain `.\install.ps1` fails with
-"running scripts is disabled on this system". The command below works without
-changing your policy:
+**Linux and macOS**
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.3.0-alpha.1
+```sh
+curl -fsSL https://raw.githubusercontent.com/whalesalad/agentdrop-cli/main/scripts/install.sh | sh
 ```
 
-It verifies the SHA-256 against `checksums.txt`, installs
-`%LOCALAPPDATA%\Programs\AgentDrop\agentdrop.exe`, and adds that folder to
-your user PATH. Open a **new** terminal afterwards. `-Uninstall` removes it.
+Installs `~/.local/bin/agentdrop` for the current user after verifying the
+release SHA-256. No sudo. It prints the PATH line to add if needed. Pin or roll
+back with `sh -s -- --version v0.3.0-alpha.1`, choose a directory with
+`--dir`, remove with `--uninstall`. Read the script first if you like: it is
+about 150 lines of POSIX sh.
 
-**Manual (any platform):**
+**Windows (PowerShell)**
 
-1. Download the archive for your platform from the
-   [releases page](https://github.com/whalesalad/agentdrop-cli/releases):
-   `agentdrop-<version>-linux-amd64.tar.gz`, `agentdrop-<version>-windows-amd64.zip`, etc.
-2. Verify it against `checksums.txt` from the same release:
-   `sha256sum -c checksums.txt --ignore-missing` (Linux/macOS) or
-   `Get-FileHash .\agentdrop-<version>-windows-amd64.zip` (PowerShell).
-3. Extract and put `agentdrop` (or `agentdrop.exe`) on your PATH, for example
-   `~/.local/bin` or `%LOCALAPPDATA%\Programs\AgentDrop`.
+```powershell
+irm https://raw.githubusercontent.com/whalesalad/agentdrop-cli/main/scripts/install.ps1 | iex
+```
+
+Installs `%LOCALAPPDATA%\Programs\AgentDrop\agentdrop.exe` and adds that folder
+to your user PATH; open a new terminal afterwards. If you download the script
+instead of piping it, run it with `powershell -ExecutionPolicy Bypass -File
+.\install.ps1` because Windows blocks scripts by default. Pass `-Version
+vX.Y.Z` to pin, `-Uninstall` to remove.
+
+**Manual**: download the archive for your platform from the
+[releases page](https://github.com/whalesalad/agentdrop-cli/releases), verify it
+against `checksums.txt` (`sha256sum -c checksums.txt --ignore-missing` or
+`Get-FileHash`), extract, and put `agentdrop` on your PATH.
+
+**Upgrading**: rerun the installer. A built-in `agentdrop update` is next.
 
 Binaries are unsigned during the alpha. Running `agentdrop` from a terminal
-does not trigger SmartScreen; double-clicking the exe may.
+does not trigger SmartScreen; double-clicking the exe shows an Unknown
+Publisher warning.
 
-**Windows notes:** pass files as arguments (`agentdrop put .\report.md`).
+**Windows notes**: pass files as arguments (`agentdrop put .\report.md`).
 Windows PowerShell 5.1 re-encodes text piped into native programs and decodes
 their output with the OEM code page, so piped uploads are not byte-exact and
 non-ASCII names in captured `--json` output look garbled. PowerShell 7 and
