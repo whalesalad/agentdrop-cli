@@ -8,10 +8,11 @@ date and evidence pointer.
 - [ ] Cut `v0.3.0-alpha.1` from main (tag → release workflow) and hand
       `linux-amd64` / `windows-amd64` archives to alpha testers. Collect first
       dogfood feedback as test cases.
-- [ ] Windows 11 VM dogfood per [docs/windows-testing.md](docs/windows-testing.md):
-      host needs `libvirt-daemon-system virt-manager swtpm ovmf` (sudo) and a
-      Windows 11 ISO (none found on this machine's disks; download from Microsoft
-      or locate the owner's copy). Then run the checklist and record results.
+- [ ] Windows 11 VM dogfood per [docs/windows-testing.md](docs/windows-testing.md).
+      VM `win11-agentdrop` exists on the owner's host with Windows 11 Enterprise
+      Evaluation 24H2 setup started 2026-09-11. Finish setup, install VS Code,
+      snapshot `clean-vscode`, then run the 14-step checklist against
+      `v0.3.0-alpha.1` and record results in the journal.
 - [ ] WSL browser-launch fallback: detect WSL (`WSL_DISTRO_NAME` or
       `/proc/version`) and try `wslview` or `cmd.exe /c start` before `xdg-open`.
 - [ ] Windows DACL enforcement for the credential directory/file

@@ -32,47 +32,70 @@ purpose (watermark and personalization limits only).
 ## VM on the Debian 12 host (KVM)
 
 Host facts verified 2026-09-11: 32 CPUs with virtualization flags, 125 GB RAM,
-`/dev/kvm` accessible to the user, QEMU 7.2 and OVMF present, no libvirt,
-virt-manager, or swtpm installed, Wayland desktop session, 583 GB free on `/`.
-No Windows ISO was found on the mounted disks.
+`/dev/kvm` accessible to the user, QEMU 7.2 and OVMF present, KDE Plasma on
+Wayland. Installed for this work: `libvirt-daemon-system virt-manager swtpm
+swtpm-tools ovmf`. libvirt on Debian 12 is socket-activated, so `libvirtd`
+showing `inactive` is normal.
 
-Windows 11 setup requires UEFI, Secure Boot capable firmware, and TPM 2.0.
-Provide all three instead of using registry bypasses:
+ISO: Microsoft's consumer download page rejects scripted requests
+("Sentinel marked this request as rejected"), so the VM uses the official
+**Windows 11 Enterprise Evaluation** ISO (24H2, build 26100.1742, 5,387,960,320
+bytes) from the Evaluation Center link `https://go.microsoft.com/fwlink/?linkid=2289031`,
+saved as `~/Downloads/Win11_24H2_EnterpriseEval_x64_en-us.iso`. It runs
+unactivated for 90 days by design and its setup permits a local account without
+the consumer OOBE workaround. CLI code paths are identical to Home/Pro.
+`~/Downloads/virtio-win.iso` (stable virtio-win) is attached as a second CD for
+optional guest tools; setup itself uses SATA and e1000e and needs no drivers.
+
+One-time host setup (already done on this machine):
 
 ```sh
-sudo apt install libvirt-daemon-system virt-manager swtpm swtpm-tools ovmf
-sudo usermod -aG libvirt "$USER"    # then log out/in or `newgrp libvirt`
+virsh -c qemu:///system net-start default && virsh -c qemu:///system net-autostart default
+virsh -c qemu:///system pool-define-as default dir --target /var/lib/libvirt/images
+virsh -c qemu:///system pool-start default && virsh -c qemu:///system pool-autostart default
 ```
 
-Create the VM with virt-manager (GUI) or `virt-install`. Keep it simple for a
-throwaway test box: SATA disk and e1000e network so Windows needs no virtio
-drivers during setup. Suggested shape: 4 vCPU, 8 GB RAM, 64 GB qcow2, UEFI with
-Secure Boot (`OVMF_CODE_4M.ms.fd`), emulated TPM 2.0 (swtpm), SPICE display.
+The VM as created (Debian 12's osinfo-db predates Windows 11, so `win10`
+supplies the defaults):
 
 ```sh
-virt-install --name win11-agentdrop --os-variant win11 \
-  --vcpus 4 --memory 8192 --cpu host-passthrough \
-  --disk size=64,bus=sata --network network=default,model=e1000e \
-  --boot uefi,loader=/usr/share/OVMF/OVMF_CODE_4M.ms.fd,loader.secure=yes,nvram.template=/usr/share/OVMF/OVMF_VARS_4M.ms.fd \
+virt-install --connect qemu:///system --name win11-agentdrop --osinfo win10 \
+  --vcpus 4 --memory 8192 --cpu host-passthrough --machine q35 \
+  --disk pool=default,size=64,format=qcow2,bus=sata \
+  --cdrom ~/Downloads/Win11_24H2_EnterpriseEval_x64_en-us.iso \
+  --disk ~/Downloads/virtio-win.iso,device=cdrom,bus=sata,readonly=on \
+  --network network=default,model=e1000e \
+  --boot loader=/usr/share/OVMF/OVMF_CODE_4M.ms.fd,loader.readonly=yes,loader.type=pflash,loader.secure=yes,nvram.template=/usr/share/OVMF/OVMF_VARS_4M.ms.fd \
+  --features smm.state=on \
   --tpm backend.type=emulator,backend.version=2.0,model=tpm-crb \
-  --graphics spice --video qxl --cdrom /path/to/Win11.iso
+  --graphics spice,listen=none --video qxl --channel spicevmc --input tablet \
+  --controller usb,model=qemu-xhci --sound none --noautoconsole
 ```
 
-Setup snags to expect: Windows 11 Home/Pro OOBE demands a Microsoft account
-online; press Shift+F10 at the sign-in step and run `start ms-cxh:localonly`
-(older builds: `OOBE\BYPASSNRO`) to create a local account. Press a key
-immediately at boot or the UEFI shell may appear before the ISO boots.
+Gotchas hit on first boot:
 
-After first login: install VS Code (user installer), take a libvirt snapshot
-named `clean-vscode`. Revert to it for every fresh-install test round:
+- The ISO's "Press any key to boot from CD or DVD" prompt expires in a few
+  seconds; unattended, firmware reports "No bootable option" and the domain can
+  end up shut off. Recover with `virsh start win11-agentdrop` followed
+  immediately by a burst of `virsh send-key win11-agentdrop KEY_SPACE`.
+- With `listen=none` the console must attach through libvirt:
+  `virt-viewer --connect qemu:///system --attach --wait --reconnect win11-agentdrop`
+  (or open it in virt-manager). Plain `virt-viewer` shows "can only be done
+  with --attach".
+- `virsh screenshot win11-agentdrop shot.ppm` gives a headless look at the
+  console; convert with ImageMagick for viewing.
+
+Setup notes: Enterprise Evaluation asks for no product key. Create a local
+account (choose the domain-join/offline option if OOBE pushes a Microsoft
+account). After first login: install VS Code (user installer), then snapshot:
 
 ```sh
-virsh snapshot-create-as win11-agentdrop clean-vscode
-virsh snapshot-revert win11-agentdrop clean-vscode
+virsh -c qemu:///system snapshot-create-as win11-agentdrop clean-vscode
+virsh -c qemu:///system snapshot-revert win11-agentdrop clean-vscode
 ```
 
 Move builds into the VM by downloading the release asset from GitHub inside the
-guest, or via a `virtiofs`/SPICE folder share. Do not copy credentials in.
+guest. Do not copy credentials in.
 
 ## Manual checklist (record results in the journal)
 
