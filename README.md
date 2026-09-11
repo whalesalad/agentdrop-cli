@@ -40,7 +40,10 @@ vX.Y.Z` to pin, `-Uninstall` to remove.
 against `checksums.txt` (`sha256sum -c checksums.txt --ignore-missing` or
 `Get-FileHash`), extract, and put `agentdrop` on your PATH.
 
-**Upgrading**: rerun the installer. A built-in `agentdrop update` is next.
+**Upgrading**: `agentdrop update` downloads the latest release for your
+platform, verifies its checksum, and replaces itself in place. `agentdrop update
+--check` only reports; `--to v0.3.0-alpha.2` pins or rolls back. Rerunning the
+installer does the same thing from outside.
 
 Binaries are unsigned during the alpha. Running `agentdrop` from a terminal
 does not trigger SmartScreen; double-clicking the exe shows an Unknown
@@ -66,6 +69,7 @@ agentdrop share ID --expires 1d # new reader link
 agentdrop revoke SHARE-ID --yes
 agentdrop delete ID --yes
 agentdrop exec -- some-agent    # run a child with AGENTDROP_API_TOKEN set
+agentdrop update                # self-update to the latest release
 ```
 
 Add `--json` to any command for one machine-readable object on stdout; errors

@@ -16,6 +16,7 @@ const helpText = `AgentDrop — files and readable responses in the cloud
   agentdrop exec -- COMMAND   Launch a client with its API token environment
   agentdrop logout            Remove this profile’s locally saved API token
   agentdrop whoami            Check personal vault access
+  agentdrop update            Update this executable to the latest release
 
 Options:
   -h, --help                 Show help
@@ -29,6 +30,8 @@ Options:
       --limit N              List up to 100 files (default 20)
       --cursor CURSOR        Continue a listing
       --profile NAME         Separate client credential profile (default: default)
+      --check                With update: report the latest version without installing
+      --to VERSION           With update: install a specific release (e.g. v0.3.0)
       --version              Print the CLI version
 
 Authentication: AGENTDROP_API_TOKEN or agentdrop login. Vault keys stay in the browser.

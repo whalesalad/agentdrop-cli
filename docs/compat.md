@@ -27,7 +27,13 @@ Request bodies are never replayed by the transport (`GetBody` is cleared).
 
 Identical to the Node CLI: `open` (default, also implicit for piped stdin),
 `put`, `get`, `list`, `info`, `share`, `delete`, `revoke`, `login`, `logout`,
-`whoami`, `exec`, `help`. Flags: `-h/--help`, `-o/--output`, `-n/--name`,
+`whoami`, `exec`, `help`. New in the native client: `update [--check] [--to vX]`
+replaces the running executable with a release from GitHub after verifying the
+SHA-256 in `checksums.txt`; `--json` returns
+`{"current","latest","updateAvailable","installed","path"}`. It refuses
+package-manager locations (`/usr/bin`, Homebrew Cellar, Nix, Snap) and never
+runs automatically or phones home on other commands.
+`AGENTDROP_UPDATE_BASE_URL` points it at a mirror with the same file layout. Flags: `-h/--help`, `-o/--output`, `-n/--name`,
 `--type`, `--expires` (`5m|30m|1h|1d|7d`, default `1h`), `--no-open`, `--json`,
 `-y/--yes`, `--limit` (1–100, default 20), `--cursor`, `--profile`
 (`[a-zA-Z0-9-]{1,64}`, default `default`), `--version`. `--flag=value` and

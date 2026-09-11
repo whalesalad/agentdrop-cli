@@ -9,12 +9,13 @@ import (
 var commandNames = map[string]bool{
 	"open": true, "put": true, "get": true, "list": true, "info": true, "share": true,
 	"delete": true, "revoke": true, "login": true, "logout": true, "whoami": true, "help": true,
+	"update": true,
 }
 
 type options struct {
-	help, version, json, yes, noOpen                   bool
-	output, name, typ, expires, limit, cursor, profile string
-	positionals                                        []string
+	help, version, json, yes, noOpen, check                bool
+	output, name, typ, expires, limit, cursor, profile, to string
+	positionals                                            []string
 	// exec mode
 	exec     bool
 	execArgs []string
@@ -75,7 +76,9 @@ func parse(args []string) (*options, error) {
 				o.yes = true
 			case "--no-open":
 				o.noOpen = true
-			case "--output", "--name", "--type", "--expires", "--limit", "--cursor", "--profile":
+			case "--check":
+				o.check = true
+			case "--output", "--name", "--type", "--expires", "--limit", "--cursor", "--profile", "--to":
 				v, err := takeValue(&i, name, inline, hasInline)
 				if err != nil {
 					return nil, err
@@ -95,6 +98,8 @@ func parse(args []string) (*options, error) {
 					o.cursor = v
 				case "--profile":
 					o.profile = v
+				case "--to":
+					o.to = v
 				}
 				continue
 			default:

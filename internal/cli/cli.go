@@ -17,6 +17,7 @@ import (
 	"github.com/whalesalad/agentdrop-cli/internal/api"
 	"github.com/whalesalad/agentdrop-cli/internal/auth"
 	"github.com/whalesalad/agentdrop-cli/internal/source"
+	"github.com/whalesalad/agentdrop-cli/internal/update"
 	"github.com/whalesalad/agentdrop-cli/internal/version"
 )
 
@@ -80,6 +81,13 @@ type session struct {
 }
 
 func run(ctx context.Context, env *Env, opts *options) (int, error) {
+	update.CleanupOld()
+	if len(opts.positionals) > 0 && opts.positionals[0] == "update" {
+		if len(opts.positionals) > 1 {
+			return 1, usage("update does not take a filename.")
+		}
+		return runUpdate(ctx, env, opts)
+	}
 	if opts.version {
 		if opts.json {
 			return 0, writeJSON(env.Stdout, map[string]any{

@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -509,5 +511,35 @@ func TestClientLabelAndUserAgent(t *testing.T) {
 	h.run("whoami")
 	if api.requests[len(api.requests)-1].Header.Get("X-AgentDrop-Client") != "claude-code" {
 		t.Fatalf("client label not honored")
+	}
+}
+
+func TestUpdateCheckAndUsage(t *testing.T) {
+	rel := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/manifest.json" {
+			w.Write([]byte(`{"version":"9.9.9"}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer rel.Close()
+	h := newHarness(t, newFakeAPI(t))
+	h.env["AGENTDROP_UPDATE_BASE_URL"] = rel.URL
+	r := h.run("update", "--check", "--json")
+	m := mustJSON(t, r.stdout)
+	if r.code != 0 || m["latest"] != "9.9.9" || m["updateAvailable"] != true || m["installed"] != false || m["current"] != "dev" {
+		t.Fatalf("update --check --json: %+v", r)
+	}
+	r = h.run("update", "--check")
+	if r.code != 0 || !strings.Contains(r.stderr, "Update available: dev -> 9.9.9") || r.stdout != "" {
+		t.Fatalf("update --check human: %+v", r)
+	}
+	if r = h.run("update", "extra"); r.code != 1 || !strings.Contains(r.stderr, "does not take a filename") {
+		t.Fatalf("update with argument: %+v", r)
+	}
+	// update needs no credential.
+	delete(h.env, "AGENTDROP_API_TOKEN")
+	if r = h.run("update", "--check", "--json"); r.code != 0 {
+		t.Fatalf("update without credential: %+v", r)
 	}
 }

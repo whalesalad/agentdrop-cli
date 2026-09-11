@@ -18,6 +18,8 @@ import (
 
 	"github.com/whalesalad/agentdrop-cli/internal/api"
 	"github.com/whalesalad/agentdrop-cli/internal/auth"
+	"github.com/whalesalad/agentdrop-cli/internal/update"
+	"github.com/whalesalad/agentdrop-cli/internal/version"
 )
 
 func parseURL(raw string) (*url.URL, error) { return url.Parse(raw) }
@@ -355,4 +357,36 @@ func runExec(ctx context.Context, env *Env, opts *options) (int, error) {
 		return 1, api.Errorf("exec", "Could not launch the requested client.")
 	}
 	return code, nil
+}
+
+func runUpdate(ctx context.Context, env *Env, opts *options) (int, error) {
+	o := update.Options{
+		BaseURL: env.Getenv("AGENTDROP_UPDATE_BASE_URL"),
+		Version: opts.to,
+		Current: version.Version,
+	}
+	var res *update.Result
+	var err error
+	if opts.check {
+		res, err = update.Check(ctx, o)
+	} else {
+		res, err = update.Apply(ctx, o)
+	}
+	if err != nil {
+		return 1, err
+	}
+	if opts.json {
+		return 0, writeJSON(env.Stdout, res)
+	}
+	switch {
+	case opts.check && res.UpdateAvailable:
+		fmt.Fprintf(env.Stderr, "Update available: %s -> %s. Run agentdrop update.\n", res.Current, res.Latest)
+	case opts.check:
+		fmt.Fprintf(env.Stderr, "agentdrop %s is current.\n", res.Current)
+	case res.Installed:
+		fmt.Fprintf(env.Stderr, "Updated agentdrop %s -> %s at %s\n", res.Current, res.Latest, res.Path)
+	default:
+		fmt.Fprintf(env.Stderr, "agentdrop %s is already current.\n", res.Current)
+	}
+	return 0, nil
 }

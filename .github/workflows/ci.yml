@@ -61,7 +61,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CGO_ENABLED = "0"
-          go build -trimpath -o agentdrop.exe ./cmd/agentdrop
+          go build -trimpath -ldflags "-X github.com/whalesalad/agentdrop-cli/internal/version.Version=ci" -o agentdrop.exe ./cmd/agentdrop
           .\scripts\smoke-windows.ps1 .\agentdrop.exe
       - name: native exe smoke (Windows PowerShell 5.1)
         shell: powershell
