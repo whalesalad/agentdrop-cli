@@ -18,12 +18,14 @@ jobs:
         run: ./scripts/build.sh ci
       - name: install.sh against the local dist (latest, pinned, checksum failure, uninstall)
         run: |
-          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist & sleep 1
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8000/manifest.json >/dev/null && break; sleep 1; done
           sh scripts/install.sh --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
           test "$(./ibin/agentdrop --version)" = ci
           sh scripts/install.sh --version ci --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
           mkdir bad && cp dist/agentdrop-ci-linux-amd64.tar.gz bad/ && sed 's/^[0-9a-f]\{64\}/0000000000000000000000000000000000000000000000000000000000000000/' dist/checksums.txt > bad/checksums.txt
-          python3 -m http.server 8001 --bind 127.0.0.1 --directory bad & sleep 1
+          python3 -m http.server 8001 --bind 127.0.0.1 --directory bad &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8001/checksums.txt >/dev/null && break; sleep 1; done
           if sh scripts/install.sh --version ci --base-url http://127.0.0.1:8001 --dir "$PWD/ibin2"; then echo "checksum mismatch was accepted"; exit 1; fi
           test ! -e ibin2/agentdrop
           sh scripts/install.sh --uninstall --dir "$PWD/ibin"
@@ -43,7 +45,8 @@ jobs:
           path: dist
       - name: install.sh on macOS (arm64 runner)
         run: |
-          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist & sleep 1
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory dist &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8000/manifest.json >/dev/null && break; sleep 1; done
           sh scripts/install.sh --base-url http://127.0.0.1:8000 --dir "$PWD/ibin"
           test "$(./ibin/agentdrop --version)" = ci
           ./ibin/agentdrop --version --json | grep -q '"os":"darwin"'
@@ -82,7 +85,11 @@ jobs:
           "$h  agentdrop-ci-windows-amd64.zip" | Set-Content dist\checksums.txt
           '{"version":"ci"}' | Set-Content dist\manifest.json
           $srv = Start-Process python -ArgumentList '-m','http.server','8000','--bind','127.0.0.1','--directory','dist' -PassThru
-          Start-Sleep 2
+          $ready = $false
+          foreach ($i in 1..30) {
+            try { Invoke-WebRequest http://127.0.0.1:8000/manifest.json -UseBasicParsing -TimeoutSec 2 | Out-Null; $ready = $true; break } catch { Start-Sleep 1 }
+          }
+          if (-not $ready) { throw "file server did not come up" }
           $dir = Join-Path $PWD 'ibin'
           powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -BaseUrl http://127.0.0.1:8000 -InstallDir $dir -NoPath
           if ((& "$dir\agentdrop.exe" --version) -ne 'ci') { throw "latest install did not report ci" }
