@@ -1,0 +1,6 @@
+/dist/
+/agentdrop
+/agentdrop.exe
+*.test
+*.out
+.DS_Store
