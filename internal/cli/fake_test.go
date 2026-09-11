@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -204,14 +205,17 @@ func (f *fakeAPI) handle(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 404, "not-found", "no route")
 		}
 	case strings.HasPrefix(path, "/api/shares/") && r.Method == "DELETE":
+		// Production semantics (verified live 2026-09-11): revoking an already
+		// revoked share is idempotent; only an unknown share ID is a 404.
 		id := strings.TrimPrefix(path, "/api/shares/")
-		if _, ok := f.shares[id]; !ok {
-			writeErr(w, 404, "share-not-found", "That share does not exist.")
+		_, live := f.shares[id]
+		if !live && !slices.Contains(f.revoked, id) {
+			writeErr(w, 404, "share-not-found", "Share not found.")
 			return
 		}
 		delete(f.shares, id)
 		f.revoked = append(f.revoked, id)
-		json.NewEncoder(w).Encode(map[string]any{"revoked": true, "id": id})
+		json.NewEncoder(w).Encode(map[string]any{"revoked": true, "shareId": id})
 	default:
 		writeErr(w, 404, "not-found", "no route")
 	}

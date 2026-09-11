@@ -334,8 +334,12 @@ func TestListInfoShareDeleteRevokeWhoami(t *testing.T) {
 		t.Fatalf("revoke: %+v", r)
 	}
 	r = h.run("revoke", shareID, "-y", "--json")
+	if r.code != 0 || mustJSON(t, r.stdout)["revoked"] != true {
+		t.Fatalf("revoke twice is idempotent: %+v", r)
+	}
+	r = h.run("revoke", "nosuchshare00", "-y", "--json")
 	if r.code != 1 || mustJSON(t, r.stderr)["error"].(map[string]any)["apiCode"] != "share-not-found" {
-		t.Fatalf("revoke twice: %+v", r)
+		t.Fatalf("revoke unknown share: %+v", r)
 	}
 	r = h.run("delete", id, "-y", "--json")
 	if r.code != 0 || mustJSON(t, r.stdout)["deleted"] != true || api.deleted[0] != id {
