@@ -5,9 +5,14 @@ date and evidence pointer.
 
 ## Now
 
-- [ ] Cut `v0.3.0-alpha.1` from main (tag → release workflow) and hand
-      `linux-amd64` / `windows-amd64` archives to alpha testers. Collect first
-      dogfood feedback as test cases.
+- [ ] Owner runs the history purge (scratchpad `purge-history.sh`: drops the
+      copied application spec from every commit, force-pushes main and the
+      alpha.1 tag). Then flip the repository public, verify anonymous download
+      of a release asset and the raw installer URLs, tag `v0.3.0-alpha.2`
+      (first release with `agentdrop update`), and prove `update` from alpha.2
+      onward on Linux and in the Windows VM.
+- [ ] Deploy the rewritten site CLI guide once the repository is public (the
+      guide links to the public repo, releases, and raw installer scripts).
 - [ ] Windows 11 VM dogfood, remaining items (22/22 CLI checks passed
       2026-09-11, see results in `docs/windows-testing.md`): PowerShell 7 in the
       VM, Ctrl-C during login, WSL with the Linux binary, and the tester's agent
@@ -25,10 +30,16 @@ date and evidence pointer.
 - [ ] macOS arm64/amd64 native smoke (login browser launch via `open`,
       Gatekeeper prompt for the unsigned binary, existing Node profile reuse).
 - [ ] Linux arm64 smoke and an Alpine (musl) container run of the same binary.
-- [ ] Installers: alpha `scripts/install.ps1` exists (pinned version, SHA-256
-      check against `checksums.txt`, per-user dir, user PATH, `-Uninstall`);
-      needs the VM run, then CI coverage on the Windows job, `install.sh`, and
-      "latest" resolution once releases are public.
+- [x] 2026-09-11 — Installers: `install.sh` (POSIX; latest via manifest,
+      pin, checksum fail-closed, uninstall, PATH advice, Rosetta detection) and
+      `install.ps1` (latest via manifest, upgrade in place, `-Uninstall`), both
+      tested in CI on Linux, macOS and Windows against a local release server.
+- [x] 2026-09-11 — `agentdrop update [--check] [--to vX]`: checksum-verified
+      self-replacement with package-manager path refusal; unit tests plus a
+      live self-replacement of a running binary on Linux.
+- [ ] Later: serve the installers from `agentdrop.lol/install.sh` and
+      `/install.ps1`; Homebrew tap, Scoop, apt/RPM/AUR using the same artifacts;
+      cosign signatures for `checksums.txt`.
 - [ ] Release hardening: pin GitHub Actions by SHA, `govulncheck` in CI, cosign
       checksum signing, SBOM/provenance. Then macOS notarization and Windows
       Authenticode for the stable channel.
