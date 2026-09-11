@@ -20,8 +20,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Not flagged --prerelease on purpose: GitHub's releases/latest pointer
+          # skips prereleases, and the installers and `agentdrop update` resolve
+          # "latest" through releases/latest/download/manifest.json.
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
-            --notes "Unsigned alpha build. Verify checksums.txt before running. See docs/release.md." \
-            --prerelease \
+            --latest \
+            --notes "Alpha build for early testers. Unsigned executables; verify checksums.txt. Install and update instructions: https://agentdrop.lol/docs/cli" \
             dist/*
