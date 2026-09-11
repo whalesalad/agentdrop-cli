@@ -6,12 +6,15 @@
   the SHA-256, installs agentdrop.exe into a per-user directory, and optionally
   adds that directory to the user PATH. No elevation required. Credentials are
   never touched. Works in Windows PowerShell 5.1 and PowerShell 7.
+.NOTES
+  Windows client editions default to the Restricted execution policy, so run
+  this as:  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version vX.Y.Z
 .EXAMPLE
-  .\install.ps1 -Version v0.3.0-alpha.1
+  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.3.0-alpha.1
 .EXAMPLE
-  .\install.ps1 -Version v0.3.0-alpha.1 -BaseUrl http://192.168.122.1:8000
+  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.3.0-alpha.1 -BaseUrl http://192.168.122.1:8000
 .EXAMPLE
-  .\install.ps1 -Uninstall
+  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 #>
 [CmdletBinding()]
 param(

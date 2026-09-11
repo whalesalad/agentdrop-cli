@@ -11,6 +11,22 @@ yet been exercised on real hardware.
 
 ## Install (alpha)
 
+**Windows (PowerShell):** download `install.ps1` from the release, then run it
+through `powershell -ExecutionPolicy Bypass`. Windows client editions ship with
+the Restricted execution policy, so a plain `.\install.ps1` fails with
+"running scripts is disabled on this system". The command below works without
+changing your policy:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.3.0-alpha.1
+```
+
+It verifies the SHA-256 against `checksums.txt`, installs
+`%LOCALAPPDATA%\Programs\AgentDrop\agentdrop.exe`, and adds that folder to
+your user PATH. Open a **new** terminal afterwards. `-Uninstall` removes it.
+
+**Manual (any platform):**
+
 1. Download the archive for your platform from the
    [releases page](https://github.com/whalesalad/agentdrop-cli/releases):
    `agentdrop-<version>-linux-amd64.tar.gz`, `agentdrop-<version>-windows-amd64.zip`, etc.
@@ -20,7 +36,14 @@ yet been exercised on real hardware.
 3. Extract and put `agentdrop` (or `agentdrop.exe`) on your PATH, for example
    `~/.local/bin` or `%LOCALAPPDATA%\Programs\AgentDrop`.
 
-Windows SmartScreen will warn about an unsigned executable during the alpha.
+Binaries are unsigned during the alpha. Running `agentdrop` from a terminal
+does not trigger SmartScreen; double-clicking the exe may.
+
+**Windows notes:** pass files as arguments (`agentdrop put .\report.md`).
+Windows PowerShell 5.1 re-encodes text piped into native programs and decodes
+their output with the OEM code page, so piped uploads are not byte-exact and
+non-ASCII names in captured `--json` output look garbled. PowerShell 7 and
+`cmd` are exact.
 
 ## Use
 

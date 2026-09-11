@@ -13,9 +13,8 @@ date and evidence pointer.
       zip downloaded through Edge (Mark-of-the-Web), PowerShell 7 in the VM,
       Ctrl-C during login, WSL with the Linux binary, and the tester's agent
       extension in VS Code (needs their accounts).
-- [ ] Docs note for Windows users: prefer file arguments over PowerShell 5.1
-      pipes (re-encoding) and expect OEM-code-page mojibake when capturing
-      non-ASCII `--json` output in PS 5.1; PowerShell 7 is exact.
+- [x] 2026-09-11 — README Windows notes: execution-policy-safe install command,
+      file arguments over PS 5.1 pipes, OEM-code-page caveat for `--json`.
 - [ ] WSL browser-launch fallback: detect WSL (`WSL_DISTRO_NAME` or
       `/proc/version`) and try `wslview` or `cmd.exe /c start` before `xdg-open`.
 - [ ] Windows DACL enforcement for the credential directory/file

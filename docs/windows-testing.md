@@ -209,6 +209,14 @@ Platform behaviors to document for Windows users (not CLI bugs):
 - Windows Terminal color bleed after native stderr under `2>&1` makes later
   output red; cosmetic.
 
+- **Execution policy blocks `.\install.ps1` by default.** All scopes are
+  Undefined on a fresh Windows 11 client, so the effective policy is Restricted
+  and the error is "cannot be loaded because running scripts is disabled on
+  this system". README now instructs
+  `powershell -ExecutionPolicy Bypass -File .\install.ps1 ...`, which needs no
+  policy change. Once releases are public, an `irm URL | iex` one-liner avoids
+  the file entirely.
+
 Not yet run: agent extension inside VS Code (needs the tester's accounts),
 PowerShell 7 in the VM, WSL, Ctrl-C during login, SmartScreen on a downloaded
 zip (the VM fetched it from the LAN, so no Mark-of-the-Web).
