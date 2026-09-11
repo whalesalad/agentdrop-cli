@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -146,11 +147,15 @@ func TestPutGetRoundTrip(t *testing.T) {
 		t.Fatalf("get to terminal refused: %+v", r)
 	}
 	h.tty = false
-	// Symlink destination refused.
+	// Directory destination refused; symlink destination refused where symlinks exist.
+	if r = h.run("get", id, "-o", dir); r.code != 1 || !strings.Contains(r.stderr, "regular file") {
+		t.Fatalf("directory dest: %+v", r)
+	}
 	link := filepath.Join(dir, "link")
-	os.Symlink(dest, link)
-	if r = h.run("get", id, "-o", link); r.code != 1 || !strings.Contains(r.stderr, "regular file") {
-		t.Fatalf("symlink dest: %+v", r)
+	if err := os.Symlink(dest, link); err == nil {
+		if r = h.run("get", id, "-o", link); r.code != 1 || !strings.Contains(r.stderr, "regular file") {
+			t.Fatalf("symlink dest: %+v", r)
+		}
 	}
 }
 
@@ -368,7 +373,7 @@ func TestLoginLogoutAndProfiles(t *testing.T) {
 	store := auth.Store{Dir: h.env["AGENTDROP_CREDENTIAL_DIR"]}
 	path, _ := store.Path(api.origin(), "default")
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o600) {
 		t.Fatalf("saved credential: %v %v", err, info)
 	}
 	cred, err := store.Load(api.origin(), "default")
@@ -429,6 +434,9 @@ func TestLoginLogoutAndProfiles(t *testing.T) {
 }
 
 func TestUnsafeCredentialFilesRejected(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission model; Windows DACL checks are tracked in TODO")
+	}
 	api := newFakeAPI(t)
 	h := newHarness(t, api)
 	delete(h.env, "AGENTDROP_API_TOKEN")
@@ -460,25 +468,26 @@ func TestUnsafeCredentialFilesRejected(t *testing.T) {
 func TestExecPassesTokenAndExitCode(t *testing.T) {
 	api := newFakeAPI(t)
 	h := newHarness(t, api)
+	child, err := os.Executable()
+	if err != nil {
+		t.Skip("no test executable path")
+	}
 	h.env["AGENTDROP_ACCESS_KEY"] = "legacy"
-	r := h.run("exec", "--", "sh", "-c", `printf '%s|%s' "$AGENTDROP_API_TOKEN" "$AGENTDROP_ACCESS_KEY"; exit 3`)
-	if r.code != 3 || r.stdout != testToken+"|" {
+	h.env["AGENTDROP_CLI_TEST_CHILD"] = "1"
+	h.env["AGENTDROP_CLI_TEST_EXIT"] = "3"
+	r := h.run("exec", "--", child, "--json", "-o", "x y")
+	if r.code != 3 || r.stdout != testToken+"||--json,-o,x y" {
 		t.Fatalf("exec: %+v", r)
 	}
-	r = h.run("exec", "--profile", "default", "--", "sh", "-c", "exit 0")
-	if r.code != 0 {
+	h.env["AGENTDROP_CLI_TEST_EXIT"] = "0"
+	if r = h.run("exec", "--profile", "default", "--", child); r.code != 0 || !strings.HasPrefix(r.stdout, testToken+"|") {
 		t.Fatalf("exec profile flag: %+v", r)
-	}
-	// Arguments are forwarded verbatim, including flags after the separator.
-	r = h.run("exec", "--", "sh", "-c", `printf '%s' "$1"`, "sh", "--json")
-	if r.code != 0 || r.stdout != "--json" {
-		t.Fatalf("exec argument forwarding: %+v", r)
 	}
 	if r = h.run("exec", "--", "definitely-not-a-command-xyz"); r.code != 1 || !strings.Contains(r.stderr, "Could not launch") {
 		t.Fatalf("exec missing command: %+v", r)
 	}
 	delete(h.env, "AGENTDROP_API_TOKEN")
-	if r = h.run("exec", "--", "sh", "-c", "true"); r.code != 1 || !strings.Contains(r.stderr, "Run agentdrop login") {
+	if r = h.run("exec", "--", child); r.code != 1 || !strings.Contains(r.stderr, "Run agentdrop login") || r.stdout != "" {
 		t.Fatalf("exec without credential must not run child: %+v", r)
 	}
 }

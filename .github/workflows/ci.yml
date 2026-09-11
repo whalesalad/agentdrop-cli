@@ -24,4 +24,27 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go vet ./...
-      - run: go test ./internal/api/... ./internal/auth/...
+      - name: full test suite on Windows
+        run: go test ./...
+      - name: native exe smoke (PowerShell)
+        shell: pwsh
+        run: |
+          $env:CGO_ENABLED = "0"
+          go build -trimpath -o agentdrop.exe ./cmd/agentdrop
+          $v = .\agentdrop.exe --version --json | ConvertFrom-Json
+          if ($v.os -ne "windows" -or $v.arch -ne "amd64") { throw "unexpected target $($v.os)/$($v.arch)" }
+          .\agentdrop.exe --help | Select-String "agentdrop put FILE" | Out-Null
+          if (-not $?) { throw "help text missing" }
+          $env:AGENTDROP_API_TOKEN = "ad-not-a-token"
+          .\agentdrop.exe whoami 2>&1 | Out-String | Select-String "must contain an API token" | Out-Null
+          if (-not $?) { throw "token validation message missing" }
+          $env:AGENTDROP_API_TOKEN = ""
+          $env:APPDATA = Join-Path $PWD "appdata-test"
+          .\agentdrop.exe logout 2>&1 | Out-String | Select-String "Removed this profile" | Out-Null
+          if (-not $?) { throw "logout should succeed with no saved profile" }
+          Write-Host "exe smoke ok"
+      - name: exe smoke (cmd.exe)
+        shell: cmd
+        run: |
+          .\agentdrop.exe --version
+          if errorlevel 1 exit /b 1
