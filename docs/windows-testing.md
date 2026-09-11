@@ -152,6 +152,67 @@ guest. Do not copy credentials in.
   `virsh screenshot` as eyes. Helper lives in the session scratchpad; promote
   it to `scripts/vm/` if it keeps earning its keep.
 
+## Results: round 1 and 2 on the Windows 11 VM (2026-09-11, v0.3.0-alpha.1)
+
+Run on Windows 11 Enterprise Evaluation 24H2 (patched), stock Windows
+PowerShell 5.1, local non-admin-elevated session, via the guest scripts in
+`scripts/vm/`. **22 of 22 CLI checks pass.** Every failure seen along the way
+was a test-harness bug (documented in `scripts/vm/README.md`).
+
+Installer and PATH:
+
+- `install.ps1` fresh install: SHA-256 verified, installed to
+  `%LOCALAPPDATA%\Programs\AgentDrop`, user PATH updated. Re-running upgrades
+  in place over the existing exe. A **new** terminal resolves `agentdrop`
+  (a child process of the installing shell does not, by design of Windows
+  environment inheritance; the installer's "open a new terminal" note is right).
+- `--version --json` reports `windows/amd64` and the tagged commit; all six
+  offline smoke checks pass in both PowerShell 5.1 (VM) and PowerShell 7 (CI).
+
+Login and credentials:
+
+- `login --no-open --name "Win11 VM"` printed the URL and code; approval from
+  the owner's browser on the host completed it. Credential file landed at
+  `%APPDATA%\agentdrop\62b84e7deef95276e0efdd50.json` (same hash name as the
+  Node layout) with ACL SYSTEM, Administrators, and the user only. Nothing under
+  `%USERPROFILE%\.config`.
+- `exec` gives the child the token (length checked, never printed), propagates
+  exit code 7, and leaves the parent environment clean.
+
+Files:
+
+- `put`/`info`/`get -o` byte-exact (SHA-256), replacement of an existing file,
+  and refusal to replace a file held open with an exclusive lock: exit 1,
+  "Could not replace the destination. Is it open in another program?", file
+  unchanged, no `.agentdrop-*` leftovers.
+- `get -o -` through `cmd` redirection is byte-exact. Unicode and spaces in
+  filenames are stored correctly (`my nötes.md`).
+- `share`, `revoke`, second `revoke` (idempotent, returns `revoked: true`),
+  bogus share ID → 404 JSON error, `delete`, then `info` → 404 JSON error.
+- `agentdrop open FILE` on a terminal printed the reader URL and launched Edge
+  via `rundll32`; the reader page rendered the markdown with unicode and emoji
+  intact. `--json` suppresses the browser as specified.
+- VS Code integrated terminal (PowerShell): `agentdrop --version` and `put`
+  work from PATH.
+
+Platform behaviors to document for Windows users (not CLI bugs):
+
+- **PowerShell 5.1 pipes re-encode text.** `Get-Content x | agentdrop put`
+  uploaded 58 bytes for a 56-byte UTF-8 file (BOM/CRLF/encoding changes).
+  `cmd /c "type x | agentdrop put"` is byte-exact. Guidance: pass file paths
+  as arguments; the agent skill already does.
+- **PowerShell 5.1 decodes native stdout with the OEM code page**, so
+  `--json` output containing non-ASCII names shows mojibake when captured in
+  a PS 5.1 variable. Redirecting to a file with `cmd` and reading as UTF-8, or
+  using PowerShell 7, is exact. Consider a doc note; a CLI-side fix is not
+  possible.
+- Windows Terminal color bleed after native stderr under `2>&1` makes later
+  output red; cosmetic.
+
+Not yet run: agent extension inside VS Code (needs the tester's accounts),
+PowerShell 7 in the VM, WSL, Ctrl-C during login, SmartScreen on a downloaded
+zip (the VM fetched it from the LAN, so no Mark-of-the-Web).
+
 ## Manual checklist (record results in the journal)
 
 Install and launch:
