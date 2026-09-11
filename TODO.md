@@ -24,8 +24,10 @@ date and evidence pointer.
 - [ ] macOS arm64/amd64 native smoke (login browser launch via `open`,
       Gatekeeper prompt for the unsigned binary, existing Node profile reuse).
 - [ ] Linux arm64 smoke and an Alpine (musl) container run of the same binary.
-- [ ] Installers: `install.sh` and `install.ps1` with version pinning, checksum
-      verification against `manifest.json`, per-user install dirs, PATH hints.
+- [ ] Installers: alpha `scripts/install.ps1` exists (pinned version, SHA-256
+      check against `checksums.txt`, per-user dir, user PATH, `-Uninstall`);
+      needs the VM run, then CI coverage on the Windows job, `install.sh`, and
+      "latest" resolution once releases are public.
 - [ ] Release hardening: pin GitHub Actions by SHA, `govulncheck` in CI, cosign
       checksum signing, SBOM/provenance. Then macOS notarization and Windows
       Authenticode for the stable channel.
