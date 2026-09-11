@@ -31,18 +31,10 @@ jobs:
         run: |
           $env:CGO_ENABLED = "0"
           go build -trimpath -o agentdrop.exe ./cmd/agentdrop
-          $v = .\agentdrop.exe --version --json | ConvertFrom-Json
-          if ($v.os -ne "windows" -or $v.arch -ne "amd64") { throw "unexpected target $($v.os)/$($v.arch)" }
-          .\agentdrop.exe --help | Select-String "agentdrop put FILE" | Out-Null
-          if (-not $?) { throw "help text missing" }
-          $env:AGENTDROP_API_TOKEN = "ad-not-a-token"
-          .\agentdrop.exe whoami 2>&1 | Out-String | Select-String "must contain an API token" | Out-Null
-          if (-not $?) { throw "token validation message missing" }
-          $env:AGENTDROP_API_TOKEN = ""
-          $env:APPDATA = Join-Path $PWD "appdata-test"
-          .\agentdrop.exe logout 2>&1 | Out-String | Select-String "Removed this profile" | Out-Null
-          if (-not $?) { throw "logout should succeed with no saved profile" }
-          Write-Host "exe smoke ok"
+          .\scripts\smoke-windows.ps1 .\agentdrop.exe
+      - name: native exe smoke (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\scripts\smoke-windows.ps1 .\agentdrop.exe
       - name: exe smoke (cmd.exe)
         shell: cmd
         run: |
