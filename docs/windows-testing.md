@@ -121,6 +121,63 @@ virtio-win guest tools (SPICE agent, display auto-resize).
 Move builds into the VM by downloading the release asset from GitHub inside the
 guest. Do not copy credentials in.
 
+## Working session recipe (resume here)
+
+State as of 2026-09-11: VM `win11-agentdrop` runs on a thin overlay above the
+golden base `win11-agentdrop-base-clean-vscode.qcow2`. The overlay currently
+has `agentdrop` v0.3.0-alpha.2 installed via the public one-liner and a saved
+credential for the owner's vault (client name "Win11 VM", profile `default`).
+**That is a live API token inside a test VM**: reverting to the base wipes it;
+if the VM is retired instead, revoke "Win11 VM" in the vault's API tokens view.
+The test files live under `C:\Users\tester\agentdrop-test`.
+
+1. Start and watch:
+   ```sh
+   virsh -c qemu:///system start win11-agentdrop
+   virt-viewer --connect qemu:///system --attach --wait --reconnect --zoom 200 win11-agentdrop &
+   ```
+   `--attach` is required because the display listens on no socket. Zoom with
+   `--zoom N` or Ctrl+plus/minus; with the guest tools installed the guest
+   resolution follows the window size. The `tester` account has no password
+   and logs in automatically.
+2. Serve release assets and guest scripts to the VM (only needed for LAN
+   testing of unreleased builds; public releases install straight from GitHub):
+   ```sh
+   mkdir -p ~/vm-serve && cd ~/vm-serve
+   gh release download vX.Y.Z -R whalesalad/agentdrop-cli --clobber
+   cp ~/code/agentdrop-cli/scripts/install.ps1 ~/code/agentdrop-cli/scripts/smoke-windows.ps1 ~/code/agentdrop-cli/scripts/vm/guest-*.ps1 .
+   python3 -m http.server 8000 --bind 192.168.122.1 > ~/vm-serve.log 2>&1 &
+   ```
+   The guest reaches the host at `http://192.168.122.1:8000`. Guest scripts
+   report results by fetching `/signal-<run>-<check>-ok|fail` URLs; read them
+   with `grep -ao 'signal-[a-z0-9-]*' ~/vm-serve.log` (`-a`: the log may
+   contain binary bytes). libvirt's `libvirt-qemu` user must be able to read
+   the ISOs and any disk you attach; the owner's home directory is
+   world-readable, which is why `~/Downloads` worked without copying.
+3. Drive the guest headlessly with `scripts/vm/vm.py` (see `scripts/vm/README.md`):
+   `shot`, `click X Y`, `key`, `type`. Click coordinates are guest pixels as
+   seen in the latest screenshot; the helper re-reads the guest resolution
+   before every click, so resizing the viewer is safe. Keep typed lines under
+   roughly 150 characters and split long commands across several `type` +
+   `KEY_ENTER` calls: long bursts drop keystrokes in the guest.
+4. Run the guest scripts in order in a normal (non-elevated) PowerShell,
+   fetched with `iwr http://192.168.122.1:8000/<name> -OutFile $env:TEMP\x.ps1;
+   powershell -ep bypass -f $env:TEMP\x.ps1`: `guest-round1-install.ps1`
+   (installer, smoke), then `agentdrop login --no-open --name "Win11 VM"`
+   approved from the host browser, then `guest-round2-files.ps1` (22 checks,
+   cleans up its own records). `guest-bootstrap.ps1` is only for a fresh base
+   and must run elevated (Win+R, `powershell`, Ctrl+Shift+Enter, then Yes on
+   the UAC prompt).
+5. First-run traps seen once and worth knowing: VS Code's first launch opens a
+   GitHub sign-in page in Edge that steals keyboard focus; Edge's first launch
+   runs a four-page wizard before showing the reader link; UAC and the
+   "Open File - Security Warning" dialogs appear on the secure desktop but
+   still accept `vm.py click`.
+
+To verify a new release from scratch: revert to the base (procedure above),
+then run the public one-liner in the guest, `agentdrop update --check`, and
+rounds 1 and 2 against the release you are testing.
+
 ## Lessons from the first VM build (2026-09-11), for the next one
 
 - **Use a current ISO.** The Evaluation Center image is cut once per feature
